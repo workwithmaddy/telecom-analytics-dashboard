@@ -1,9 +1,0 @@
-﻿PlanID,PlanCategory,PlanType,TargetSegment,PriceBandINR,ReferenceMonthlyValueINR,IncludedDataGB,IncludedVoiceMinutes,NetworkEligibility,BillingCycle,FamilyLines
-P001,Prepaid Entry,Prepaid,Consumer,₹199–₹299,249,42,3000,4G/5G,28 Days,1
-P002,Prepaid Unlimited,Prepaid,Consumer,₹299–₹499,399,56,5000,4G/5G,28 Days,1
-P003,Prepaid 5G,Prepaid,Consumer,₹349–₹599,449,84,5000,5G,28 Days,1
-P004,Postpaid Individual,Postpaid,Consumer,₹449–₹799,599,50,5000,4G/5G,Monthly,1
-P005,Postpaid Family,Postpaid,Consumer,"₹699–₹1,499",999,120,10000,5G,Monthly,4
-P006,Premium 5G Postpaid,Postpaid,Consumer,"₹999–₹1,999",1499,250,15000,5G,Monthly,4
-P007,Business Mobile,Business,SMB,"₹1,499+",2499,500,25000,5G,Monthly,10
-P008,Enterprise Mobility,Enterprise,Enterprise,Contract Pricing,6499,2000,75000,5G,Monthly Contract,50
