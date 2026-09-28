@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Telecom Operations & Customer Analytics</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<style>
+:root{
+  --bg:#140F1F;
+  --panel:#21172E;
+  --panel2:#2A1E38;
+  --border:#3B2A50;
+  --text:#FAF7FF;
+  --muted:#A99BB8;
+  --cyan:#8B5CF6;
+  --blue:#22D3EE;
+  --purple:#C084FC;
+  --magenta:#F472B6;
+  --green:#34D399;
+  --amber:#F59E0B;
+  --red:#FB7185;
+  --shadow:0 14px 32px rgba(0,0,0,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif}
+body{min-height:100vh}
+button,select,input{font:inherit}
+.app{display:flex;min-height:100vh}
+.sidebar{
+ width:245px;position:fixed;inset:0 auto 0 0;background:#0E0A16;
+ border-right:1px solid rgba(192,132,252,.14);padding:22px 14px 18px;z-index:20;
+ display:flex;flex-direction:column;
+}
+.brand{display:flex;align-items:center;gap:12px;padding:8px 10px 22px}
+.brand-icon{
+ width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:27px;
+ background:linear-gradient(145deg,#8B5CF6,#F472B6);box-shadow:0 10px 25px rgba(139,92,246,.24)
+}
+.brand h1{font-size:17px;margin:0}.brand p{font-size:11px;color:var(--muted);margin:4px 0 0}
+.nav{display:flex;flex-direction:column;gap:8px}
+.nav button{
+ border:1px solid transparent;background:transparent;color:#E5DDF0;border-radius:12px;
+ padding:12px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;font-weight:650
+}
+.nav button .ico{font-size:19px;width:26px;text-align:center}
+.nav button.active{background:linear-gradient(90deg,#3A2459,#5B2D74);border-color:#8B5CF6;color:#fff;box-shadow:inset 4px 0 0 var(--cyan)}
+.nav button:hover{background:#2B1E3A}
+.sidebar-art{
+ margin:24px auto 12px;width:90%;height:180px;border-radius:16px;overflow:hidden;position:relative;
+ background:
+ radial-gradient(circle at 50% 32%,rgba(244,114,182,.12),transparent 26%),
+ linear-gradient(180deg,#2B1E3A 0%,#0E0A16 80%);
+ border:1px solid rgba(192,132,252,.18);
+ display:flex;align-items:center;justify-content:center;padding:14px;
+}
+.sidebar-art img{
+ width:100%;height:100%;object-fit:contain;display:block;
+ filter:drop-shadow(0 10px 18px rgba(0,0,0,.22));
+}
+.sidebar-foot{margin-top:auto;border-top:1px solid rgba(255,255,255,.08);padding:14px 9px 0;color:var(--muted);font-size:10px;line-height:1.5}
+
+.main{margin-left:245px;width:calc(100% - 245px);padding:22px 24px 38px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.topbar h2{font-size:27px;margin:0 0 4px}.topbar p{margin:0;color:var(--muted);font-size:12px}
+.period{text-align:right;font-size:11px;color:var(--muted)}.period strong{display:block;color:#F0EAF7;font-size:12px;margin-bottom:3px}
+.filters{
+ display:grid;grid-template-columns:1.1fr .9fr .9fr 1.25fr 1.2fr 1fr 1.1fr auto;gap:9px;
+ padding:12px;background:#1A1226;border:1px solid #3B2A50;border-radius:16px;margin-bottom:14px
+}
+.filter label{display:block;font-size:9px;color:#A99BB8;text-transform:uppercase;letter-spacing:.7px;margin:0 0 5px 4px}
+.filter select,.filter input{
+ width:100%;height:38px;border-radius:10px;border:1px solid #4B3562;background:#241833;color:#FAF7FF;padding:0 10px;outline:none
+}
+.reset{
+ align-self:end;height:38px;padding:0 14px;border:1px solid #6D4A8E;background:#3A2459;color:#FAF7FF;border-radius:10px;cursor:pointer
+}
+.page{display:none}.page.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
+.kpi{
+ min-height:105px;background:linear-gradient(145deg,#2A1E38,#1B1328);border:1px solid #3B2A50;border-radius:14px;
+ padding:12px;box-shadow:var(--shadow);display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center;overflow:hidden;position:relative
+}
+.kpi:after{content:"";position:absolute;width:82px;height:82px;border-radius:50%;right:-34px;top:-34px;background:var(--accent);opacity:.08;filter:blur(18px)}
+.kpi-icon{
+ width:45px;height:45px;border-radius:13px;display:grid;place-items:center;font-size:23px;
+ background:color-mix(in srgb,var(--accent) 22%,transparent);border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);color:var(--accent)
+}
+.kpi-title{font-size:10px;color:#E6DDF0;font-weight:700}.kpi-value{font-size:22px;font-weight:800;margin-top:5px}.kpi-sub{font-size:9px;color:#A18FB4;margin-top:5px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.card{
+ background:#21172E;border:1px solid #3B2A50;border-radius:15px;box-shadow:var(--shadow);padding:14px;min-height:220px
+}
+.card h3{font-size:14px;margin:0 0 3px}.hint{font-size:10px;color:#A18FB4;margin-bottom:8px}
+.chart{position:relative;height:250px}.chart.tall{height:300px}.chart.short{height:205px}
+.insights{margin:0;padding-left:18px;color:#E8E0EF;font-size:11px;line-height:1.75}.insights li{margin:4px 0}
+.table-wrap{overflow:auto;max-height:290px;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{position:sticky;top:0;background:#2C1F3A;color:#F0EAF7;text-align:left;padding:9px;border-bottom:1px solid #4B3562}
+td{padding:8px 9px;border-bottom:1px solid rgba(192,132,252,.10);color:#D5C9E2}
+.loading{
+ position:fixed;inset:0;background:#140F1F;z-index:100;display:grid;place-items:center;text-align:center
+}
+.loader{width:54px;height:54px;border-radius:50%;border:4px solid #3B2A50;border-top-color:var(--cyan);animation:spin 1s linear infinite;margin:auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading h3{margin:14px 0 5px}.loading p{color:var(--muted);font-size:12px}
+@media(max-width:1200px){
+ .kpis{grid-template-columns:repeat(3,1fr)} .filters{grid-template-columns:repeat(4,1fr)}
+ .c3,.c4,.c5,.c6,.c7,.c8{grid-column:span 6}
+}
+@media(max-width:800px){
+ .sidebar{width:72px;padding:14px 8px}.brand div:last-child,.nav .txt,.sidebar-art,.sidebar-foot{display:none}
+ .brand{padding:4px 4px 18px}.brand-icon{width:48px}.nav button{justify-content:center;padding:12px 8px}
+ .main{margin-left:72px;width:calc(100% - 72px);padding:15px}.filters{grid-template-columns:repeat(2,1fr)}
+ .kpis{grid-template-columns:repeat(2,1fr)}.c3,.c4,.c5,.c6,.c7,.c8,.c12{grid-column:span 12}
+}
+</style>
+</head>
+<body>
+<div class="loading" id="loading">
+ <div><div class="loader"></div><h3>Loading Telecom Analytics</h3><p>Preparing customers, network and service data…</p></div>
+</div>
+
+<div class="app">
+<aside class="sidebar">
+ <div class="brand"><div class="brand-icon">📡</div><div><h1>Telecom Analytics</h1><p>Performance Intelligence</p></div></div>
+ <div class="nav">
+  <button class="active" data-page="overview"><span class="ico">▣</span><span class="txt">Executive Overview</span></button>
+  <button data-page="customer"><span class="ico">👥</span><span class="txt">Customer & Churn</span></button>
+  <button data-page="revenue"><span class="ico">₹</span><span class="txt">Revenue & Plans</span></button>
+  <button data-page="network"><span class="ico">♒</span><span class="txt">Network Performance</span></button>
+  <button data-page="service"><span class="ico">☑</span><span class="txt">Service & Complaints</span></button>
+ </div>
+ <div class="sidebar-art"><img src="neon_customer_support_headset_icon.png" alt="Customer support illustration"/></div>
+ <div class="sidebar-foot">Interactive telecom portfolio dashboard<br/>Synthetic portfolio dataset · Jan 2025 – Jun 2026</div>
+</aside>
+
+<main class="main">
+ <div class="topbar">
+  <div><h2 id="pageTitle">Executive Overview</h2><p id="pageSub">Customer, revenue, network and service performance in one management view.</p></div>
+  <div class="period"><strong>Jan 2025 – Jun 2026</strong><span>Interactive portfolio dataset</span></div>
+ </div>
+
+ <div class="filters">
+  <div class="filter"><label>From month</label><input type="month" id="fromMonth"/></div>
+  <div class="filter"><label>To month</label><input type="month" id="toMonth"/></div>
+  <div class="filter"><label>Region</label><select id="region"></select></div>
+  <div class="filter"><label>City</label><select id="city"></select></div>
+  <div class="filter"><label>Plan Name</label><select id="plan"></select></div>
+  <div class="filter"><label>Segment</label><select id="segment"></select></div>
+  <div class="filter"><label>Plan Type</label><select id="planType"></select></div>
+  <button class="reset" id="reset">Reset</button>
+ </div>
+
+ <!-- PAGE 1 -->
+ <section class="page active" id="page-overview">
+  <div class="kpis" id="overviewKpis"></div>
+  <div class="grid">
+   <div class="card c5"><h3>Monthly Revenue & Active Customers</h3><div class="hint">Monthly commercial trend</div><div class="chart"><canvas id="overviewTrend"></canvas></div></div>
+   <div class="card c4"><h3>Revenue by Region</h3><div class="hint">Revenue contribution across operating regions</div><div class="chart"><canvas id="overviewRegion"></canvas></div></div>
+   <div class="card c3"><h3>Customer Mix by Plan</h3><div class="hint">Active customer distribution</div><div class="chart"><canvas id="overviewPlan"></canvas></div></div>
+   <div class="card c4"><h3>Churn Rate by Plan</h3><div class="hint">Retention risk by commercial plan</div><div class="chart short"><canvas id="overviewChurn"></canvas></div></div>
+   <div class="card c4"><h3>Network Availability by Region</h3><div class="hint">Average infrastructure availability</div><div class="chart short"><canvas id="overviewAvail"></canvas></div></div>
+   <div class="card c4"><h3>Key Insights</h3><div class="hint">Automatically derived from current filters</div><ul class="insights" id="overviewInsights"></ul></div>
+  </div>
+ </section>
+
+ <!-- PAGE 2 -->
+ <section class="page" id="page-customer">
+  <div class="kpis" id="customerKpis"></div>
+  <div class="grid">
+   <div class="card c6"><h3>Churn Trend</h3><div class="hint">Monthly churn rate</div><div class="chart"><canvas id="custChurnTrend"></canvas></div></div>
+   <div class="card c6"><h3>Churn by Contract Type</h3><div class="hint">Retention performance by contract</div><div class="chart"><canvas id="custContract"></canvas></div></div>
+   <div class="card c6"><h3>Churn by Region</h3><div class="hint">Regional churn concentration</div><div class="chart"><canvas id="custRegion"></canvas></div></div>
+   <div class="card c6"><h3>Churn by Age Band</h3><div class="hint">Customer age profile</div><div class="chart"><canvas id="custAge"></canvas></div></div>
+   <div class="card c5"><h3>Customer Segment Mix</h3><div class="hint">Consumer, SMB and enterprise mix</div><div class="chart"><canvas id="custSegment"></canvas></div></div>
+   <div class="card c7"><h3>Complaint Types</h3><div class="hint">Service demand from filtered customers</div><div class="chart"><canvas id="custComplaints"></canvas></div></div>
+  </div>
+ </section>
+
+ <!-- PAGE 3 -->
+ <section class="page" id="page-revenue">
+  <div class="kpis" id="revenueKpis"></div>
+  <div class="grid">
+   <div class="card c6"><h3>Revenue Trend</h3><div class="hint">Monthly revenue development</div><div class="chart"><canvas id="revTrend"></canvas></div></div>
+   <div class="card c6"><h3>Revenue by Plan</h3><div class="hint">Commercial plan contribution</div><div class="chart"><canvas id="revPlan"></canvas></div></div>
+   <div class="card c5"><h3>ARPU by Customer Segment</h3><div class="hint">Average monthly revenue per customer</div><div class="chart"><canvas id="revArpu"></canvas></div></div>
+   <div class="card c7"><h3>Data Usage vs Revenue by Plan</h3><div class="hint">Commercial value vs customer consumption</div><div class="chart"><canvas id="revScatter"></canvas></div></div>
+   <div class="card c12"><h3>Plan Performance Matrix</h3><div class="hint">Customer, revenue, ARPU, churn and usage comparison</div><div class="table-wrap"><table id="planTable"></table></div></div>
+  </div>
+ </section>
+
+ <!-- PAGE 4 -->
+ <section class="page" id="page-network">
+  <div class="kpis" id="networkKpis"></div>
+  <div class="grid">
+   <div class="card c6"><h3>Download Speed by City</h3><div class="hint">Average download performance</div><div class="chart"><canvas id="netSpeed"></canvas></div></div>
+   <div class="card c6"><h3>Dropped Call Rate by Region</h3><div class="hint">Voice reliability</div><div class="chart"><canvas id="netDcr"></canvas></div></div>
+   <div class="card c6"><h3>Network Availability Trend</h3><div class="hint">Monthly infrastructure availability</div><div class="chart"><canvas id="netAvail"></canvas></div></div>
+   <div class="card c6"><h3>Traffic by Network Technology</h3><div class="hint">4G / 5G traffic mix</div><div class="chart"><canvas id="netTraffic"></canvas></div></div>
+   <div class="card c6"><h3>Latency vs Download Speed</h3><div class="hint">Tower-level performance relationship</div><div class="chart"><canvas id="netScatter"></canvas></div></div>
+   <div class="card c6"><h3>Top Congested Towers</h3><div class="hint">Infrastructure requiring operational attention</div><div class="table-wrap"><table id="towerTable"></table></div></div>
+  </div>
+ </section>
+
+ <!-- PAGE 5 -->
+ <section class="page" id="page-service">
+  <div class="kpis" id="serviceKpis"></div>
+  <div class="grid">
+   <div class="card c6"><h3>Ticket Trend</h3><div class="hint">Monthly service demand</div><div class="chart"><canvas id="svcTrend"></canvas></div></div>
+   <div class="card c6"><h3>Tickets by Issue Type</h3><div class="hint">Top drivers of customer contact</div><div class="chart"><canvas id="svcIssue"></canvas></div></div>
+   <div class="card c6"><h3>SLA Met % by Channel</h3><div class="hint">Service execution by channel</div><div class="chart"><canvas id="svcSla"></canvas></div></div>
+   <div class="card c6"><h3>Resolution Hours by Priority</h3><div class="hint">Average handling duration</div><div class="chart"><canvas id="svcPriority"></canvas></div></div>
+   <div class="card c5"><h3>CSAT by Issue Type</h3><div class="hint">Customer experience after resolution</div><div class="chart"><canvas id="svcCsat"></canvas></div></div>
+   <div class="card c7"><h3>Open Ticket Details</h3><div class="hint">Current unresolved work items</div><div class="table-wrap"><table id="ticketTable"></table></div></div>
+  </div>
+ </section>
+</main>
+</div>
+
+<script>
+const COLORS=["#8B5CF6","#C084FC","#F472B6","#22D3EE","#34D399","#F59E0B","#FB7185","#A78BFA","#67E8F9"];
+const charts={};
+let data={};
+let planMap=new Map(), customerMap=new Map();
+let activePage="overview";
+
+Chart.defaults.color="#9eb4d1";
+Chart.defaults.font.family='Inter,"Segoe UI",Arial,sans-serif';
+Chart.defaults.borderColor="rgba(192,132,252,.12)";
+
+const $=id=>document.getElementById(id);
+const num=v=>Number(v||0);
+const fmt=(n,d=0)=>Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d});
+const money=n=> {
+ const x=Number(n||0);
+ if(Math.abs(x)>=1e7)return "₹ "+(x/1e7).toFixed(1)+" Cr";
+ if(Math.abs(x)>=1e5)return "₹ "+(x/1e5).toFixed(1)+" L";
+ return "₹ "+fmt(x,0);
+};
+const pct=n=>Number(n||0).toFixed(2)+"%";
+
+function parseCSV(file){
+ return new Promise((resolve,reject)=>{
+  Papa.parse(file,{download:true,header:true,dynamicTyping:true,skipEmptyLines:true,
+   complete:r=>resolve(r.data),error:reject});
+ });
+}
+
+async function loadAll(){
+ const [customers,plans,towers,custMonthly,network,tickets]=await Promise.all([
+  parseCSV("DimCustomer.csv"),parseCSV("DimPlan.csv"),parseCSV("DimTower.csv"),
+  parseCSV("FactCustomerMonthly.csv"),parseCSV("FactNetworkMonthly.csv"),parseCSV("FactServiceTickets.csv")
+ ]);
+ const planDisplayNames={
+  P001:"Prepaid basic",
+  P002:"Prepaid 5g unlimited",
+  P003:"Post paid basic",
+  P004:"postpaid unlimited",
+  P005:"postpaid unlimited",
+  P006:"postpaid unlimited",
+  P007:"postpaid unlimited",
+  P008:"Enterprise basic",
+  P009:"Enterprise premium"
+ };
+ plans.forEach(p=>{p.PlanName=planDisplayNames[p.PlanID]||p.PlanName;});
+ data={customers,plans,towers,custMonthly,network,tickets};
+ planMap=new Map(plans.map(p=>[p.PlanID,p]));
+ customerMap=new Map(customers.map(c=>[c.CustomerID,c]));
+ initFilters();
+ render();
+ $("loading").style.display="none";
+}
+
+function opts(id,values){
+ const el=$(id); el.innerHTML='<option value="">All</option>'+values.filter(v=>v!==null&&v!==undefined&&v!=="").sort().map(v=>`<option>${v}</option>`).join("");
+}
+function initFilters(){
+ const months=[...new Set(data.custMonthly.map(r=>String(r.MonthStart).slice(0,7)))].sort();
+ $("fromMonth").value=months[0]; $("toMonth").value=months[months.length-1];
+ $("fromMonth").min=$("toMonth").min=months[0]; $("fromMonth").max=$("toMonth").max=months[months.length-1];
+ opts("region",[...new Set(data.customers.map(r=>r.Region))]);
+ opts("city",[...new Set(data.customers.map(r=>r.City))]);
+ opts("plan",[...new Set(data.plans.map(r=>r.PlanName))]);
+ opts("segment",[...new Set(data.customers.map(r=>r.CustomerSegment))]);
+ opts("planType",[...new Set(data.plans.map(r=>r.PlanType))]);
+}
+
+function filters(){
+ return {
+  from:$("fromMonth").value,to:$("toMonth").value,region:$("region").value,city:$("city").value,
+  plan:$("plan").value,segment:$("segment").value,planType:$("planType").value
+ };
+}
+function monthOK(v,f){const m=String(v).slice(0,7);return (!f.from||m>=f.from)&&(!f.to||m<=f.to)}
+function customerFilterRow(r,f){
+ const p=planMap.get(r.PlanID)||{};
+ return monthOK(r.MonthStart,f)&&(!f.region||r.Region===f.region)&&(!f.city||r.City===f.city)&&
+  (!f.plan||p.PlanName===f.plan)&&(!f.segment||r.CustomerSegment===f.segment)&&(!f.planType||p.PlanType===f.planType)
+}
+function ticketFilterRow(r,f){
+ const p=planMap.get(r.PlanID)||{};
+ return monthOK(r.MonthStart,f)&&(!f.region||r.Region===f.region)&&(!f.city||r.City===f.city)&&
+  (!f.plan||p.PlanName===f.plan)&&(!f.segment||r.CustomerSegment===f.segment)&&(!f.planType||p.PlanType===f.planType)
+}
+function networkFilterRow(r,f){return monthOK(r.MonthStart,f)&&(!f.region||r.Region===f.region)&&(!f.city||r.City===f.city)}
+function filtered(){
+ const f=filters();
+ return {
+  cm:data.custMonthly.filter(r=>customerFilterRow(r,f)),
+  nt:data.network.filter(r=>networkFilterRow(r,f)),
+  tk:data.tickets.filter(r=>ticketFilterRow(r,f)),
+  f
+ };
+}
+
+function group(rows,key,fn){
+ const m=new Map();
+ rows.forEach(r=>{const k=typeof key==="function"?key(r):r[key];if(!m.has(k))m.set(k,[]);m.get(k).push(r)});
+ return [...m.entries()].map(([k,a])=>[k,fn(a)]);
+}
+function uniqueCustomers(rows){return new Set(rows.map(r=>r.CustomerID)).size}
+function revenue(rows){return rows.reduce((s,r)=>s+num(r.Revenue),0)}
+function churnCount(rows){return new Set(rows.filter(r=>num(r.ChurnedThisMonth)===1).map(r=>r.CustomerID)).size}
+function arpu(rows){
+ const byMonth=group(rows,r=>String(r.MonthStart).slice(0,7),a=>({rev:revenue(a),cust:uniqueCustomers(a)}));
+ return byMonth.length?byMonth.reduce((s,x)=>s+(x[1].cust?x[1].rev/x[1].cust:0),0)/byMonth.length:0
+}
+function churnRate(rows){
+ const byMonth=group(rows,r=>String(r.MonthStart).slice(0,7),a=>{
+  const c=uniqueCustomers(a),ch=churnCount(a); return c?ch/c*100:0
+ });
+ return byMonth.length?byMonth.reduce((s,x)=>s+x[1],0)/byMonth.length:0
+}
+function destroy(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+function common(percent=false){
+ return {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:10,usePointStyle:true}}},
+  scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:"rgba(192,132,252,.10)"},ticks:{callback:v=>percent?v+"%":v}}}}
+}
+function bar(id,labels,vals,{horizontal=false,color=COLORS[0],percent=false,legend=false,label=""}={}){
+ destroy(id); charts[id]=new Chart($(id),{type:"bar",data:{labels,datasets:[{label,data:vals,backgroundColor:color,borderRadius:5,maxBarThickness:34}]},
+  options:{...common(percent),indexAxis:horizontal?"y":"x",plugins:{legend:{display:legend,labels:{boxWidth:10,usePointStyle:true}}}}})
+}
+function line(id,labels,sets,{percent=false,fill=false}={}){
+ destroy(id); charts[id]=new Chart($(id),{type:"line",data:{labels,datasets:sets.map((s,i)=>({
+  label:s.label,data:s.data,borderColor:s.color||COLORS[i],backgroundColor:(s.color||COLORS[i])+"33",
+  pointRadius:2.5,borderWidth:2.5,tension:.3,fill:s.fill??fill,yAxisID:s.axis||"y"
+ }))},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+ plugins:{legend:{display:sets.length>1,labels:{boxWidth:10,usePointStyle:true}}},
+ scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:"rgba(192,132,252,.10)"},ticks:{callback:v=>percent?v+"%":v}},
+ y1:{position:"right",display:sets.some(s=>s.axis==="y1"),grid:{drawOnChartArea:false}}}}})
+}
+function donut(id,labels,vals){destroy(id);charts[id]=new Chart($(id),{type:"doughnut",data:{labels,datasets:[{data:vals,backgroundColor:COLORS,borderColor:"#21172E",borderWidth:3}]},
+ options:{responsive:true,maintainAspectRatio:false,cutout:"64%",plugins:{legend:{position:"right",labels:{boxWidth:9,usePointStyle:true,font:{size:9}}}}}})}
+function scatter(id,points,{xTitle="",yTitle=""}={}){
+ destroy(id);charts[id]=new Chart($(id),{type:"scatter",data:{datasets:[{data:points,backgroundColor:COLORS[2],pointRadius:5}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+ scales:{x:{title:{display:true,text:xTitle},grid:{color:"rgba(192,132,252,.10)"}},y:{title:{display:true,text:yTitle},grid:{color:"rgba(192,132,252,.10)"}}}}})
+}
+function cards(id,items){$(id).innerHTML=items.map(x=>`<div class="kpi" style="--accent:${x.color}"><div class="kpi-icon">${x.icon}</div><div><div class="kpi-title">${x.title}</div><div class="kpi-value">${x.value}</div><div class="kpi-sub">${x.sub||""}</div></div></div>`).join("")}
+function table(id,headers,rows){$(id).innerHTML="<thead><tr>"+headers.map(h=>`<th>${h}</th>`).join("")+"</tr></thead><tbody>"+rows.map(r=>"<tr>"+r.map(v=>`<td>${v}</td>`).join("")+"</tr>").join("")+"</tbody>"}
+
+function baseMetrics(cm,nt,tk){
+ const active=uniqueCustomers(cm),rev=revenue(cm),avgArpu=arpu(cm),ch=churnRate(cm);
+ const speed=nt.length?nt.reduce((s,r)=>s+num(r.AvgDownloadMbps),0)/nt.length:0;
+ const calls=nt.reduce((s,r)=>s+num(r.CallAttempts),0),drops=nt.reduce((s,r)=>s+num(r.DroppedCalls),0);
+ const dcr=calls?drops/calls*100:0;
+ const avail=nt.length?nt.reduce((s,r)=>s+num(r.AvailabilityPct),0)/nt.length:0;
+ return {active,rev,avgArpu,ch,speed,dcr,avail};
+}
+function overview(){
+ const {cm,nt,tk}=filtered(),m=baseMetrics(cm,nt,tk);
+ cards("overviewKpis",[
+  {title:"Active Customers",value:fmt(m.active),icon:"👥",color:COLORS[0],sub:"filtered customer base"},
+  {title:"Total Revenue",value:money(m.rev),icon:"₹",color:COLORS[1],sub:"selected period"},
+  {title:"ARPU",value:money(m.avgArpu),icon:"◉",color:COLORS[0],sub:"average monthly"},
+  {title:"Churn Rate",value:pct(m.ch),icon:"↻",color:COLORS[3],sub:"average monthly"},
+  {title:"Avg. Download Speed",value:fmt(m.speed,1)+" Mbps",icon:"⚡",color:COLORS[0],sub:"network quality"},
+  {title:"Dropped Call Rate",value:pct(m.dcr),icon:"☎",color:COLORS[2],sub:"voice reliability"}
+ ]);
+ const months=group(cm,r=>String(r.MonthStart).slice(0,7),a=>({rev:revenue(a),cust:uniqueCustomers(a)})).sort((a,b)=>a[0].localeCompare(b[0]));
+ destroy("overviewTrend");charts.overviewTrend=new Chart($("overviewTrend"),{data:{labels:months.map(x=>new Date(x[0]+"-01").toLocaleString("en",{month:"short",year:"2-digit"})),datasets:[
+  {type:"bar",label:"Revenue",data:months.map(x=>x[1].rev/1e6),backgroundColor:COLORS[1],borderRadius:5,yAxisID:"y"},
+  {type:"line",label:"Active Customers",data:months.map(x=>x[1].cust),borderColor:COLORS[0],backgroundColor:COLORS[0],tension:.3,pointRadius:2,yAxisID:"y1"}
+ ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{boxWidth:9,usePointStyle:true}}},
+ scales:{x:{grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:"Revenue (₹M)"},ticks:{callback:v=>"₹"+v+"M"}},
+ y1:{position:"right",beginAtZero:true,title:{display:true,text:"Customers"},grid:{drawOnChartArea:false}}}}});
+ let a=group(cm,"Region",revenue).sort((x,y)=>y[1]-x[1]);bar("overviewRegion",a.map(x=>x[0]),a.map(x=>x[1]/1e6),{horizontal:true,color:COLORS[0]});
+ a=group(cm,r=>(planMap.get(r.PlanID)||{}).PlanName||r.PlanID,uniqueCustomers).sort((x,y)=>y[1]-x[1]).slice(0,6);donut("overviewPlan",a.map(x=>x[0]),a.map(x=>x[1]));
+ a=group(cm,r=>(planMap.get(r.PlanID)||{}).PlanName||r.PlanID,churnRate).sort((x,y)=>y[1]-x[1]);bar("overviewChurn",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[2],percent:true});
+ a=group(nt,"Region",x=>x.reduce((s,r)=>s+num(r.AvailabilityPct),0)/x.length).sort((x,y)=>y[1]-x[1]);bar("overviewAvail",a.map(x=>x[0]),a.map(x=>x[1]),{horizontal:true,color:COLORS[3],percent:true});
+ const topRegion=group(cm,"Region",revenue).sort((x,y)=>y[1]-x[1])[0];
+ const topIssue=group(tk,"IssueType",a=>a.length).sort((x,y)=>y[1]-x[1])[0];
+ const worstDcr=group(nt,"Region",a=>a.reduce((s,r)=>s+num(r.DroppedCalls),0)/Math.max(1,a.reduce((s,r)=>s+num(r.CallAttempts),0))*100).sort((x,y)=>y[1]-x[1])[0];
+ $("overviewInsights").innerHTML=[
+  `Revenue in the selected period is <strong>${money(m.rev)}</strong> across ${fmt(m.active)} active customers.`,
+  topRegion?`<strong>${topRegion[0]}</strong> is the largest revenue region at ${money(topRegion[1])}.`:"",
+  `Average network availability is <strong>${pct(m.avail)}</strong> with ${fmt(m.speed,1)} Mbps average download speed.`,
+  worstDcr?`Voice reliability requires the most attention in <strong>${worstDcr[0]}</strong> (${pct(worstDcr[1])} dropped-call rate).`:"",
+  topIssue?`The leading service issue is <strong>${topIssue[0]}</strong> with ${fmt(topIssue[1])} tickets.`:""
+ ].filter(Boolean).map(x=>`<li>${x}</li>`).join("");
+}
+function customer(){
+ const {cm,tk}=filtered();
+ const custIds=new Set(cm.map(r=>r.CustomerID));
+ const dims=data.customers.filter(c=>custIds.has(c.CustomerID));
+ const active=uniqueCustomers(cm),ch=churnCount(cm),rate=churnRate(cm);
+ const tenure=dims.length?dims.reduce((s,r)=>s+num(r.TenureMonthsAtEnd),0)/dims.length:0;
+ cards("customerKpis",[
+  {title:"Total Customers",value:fmt(dims.length),icon:"👥",color:COLORS[0]},
+  {title:"Active Customers",value:fmt(active),icon:"✓",color:COLORS[3]},
+  {title:"Churned Customers",value:fmt(ch),icon:"↘",color:COLORS[2]},
+  {title:"Churn Rate",value:pct(rate),icon:"↻",color:COLORS[2]},
+  {title:"Average Tenure",value:fmt(tenure,1)+" mo",icon:"◷",color:COLORS[1]},
+  {title:"Tickets / 1K",value:active?fmt(tk.length*1000/active,1):"0",icon:"☑",color:COLORS[4]}
+ ]);
+ let a=group(cm,r=>String(r.MonthStart).slice(0,7),churnRate).sort((x,y)=>x[0].localeCompare(y[0]));line("custChurnTrend",a.map(x=>x[0]),[{label:"Churn %",data:a.map(x=>x[1]),color:COLORS[2],fill:true}],{percent:true});
+ a=group(dims,"ContractType",x=>{const ids=new Set(x.map(r=>r.CustomerID));const rows=cm.filter(r=>ids.has(r.CustomerID));return churnRate(rows)});bar("custContract",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[2],percent:true});
+ a=group(cm,"Region",churnRate).sort((x,y)=>y[1]-x[1]);bar("custRegion",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[0],percent:true});
+ a=group(dims,"AgeBand",x=>{const ids=new Set(x.map(r=>r.CustomerID));const rows=cm.filter(r=>ids.has(r.CustomerID));return churnRate(rows)});bar("custAge",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[1],percent:true});
+ a=group(dims,"CustomerSegment",x=>x.length);donut("custSegment",a.map(x=>x[0]),a.map(x=>x[1]));
+ a=group(tk,"IssueType",x=>x.length).sort((x,y)=>y[1]-x[1]);bar("custComplaints",a.map(x=>x[0]),a.map(x=>x[1]),{horizontal:true,color:COLORS[1]});
+}
+function revenuePage(){
+ const {cm}=filtered();const rev=revenue(cm),active=uniqueCustomers(cm),avg=arpu(cm);
+ const post=cm.filter(r=>(planMap.get(r.PlanID)||{}).PlanType==="Postpaid"),postRev=revenue(post);
+ const dataGB=cm.reduce((s,r)=>s+num(r.DataUsageGB),0);
+ cards("revenueKpis",[
+  {title:"Total Revenue",value:money(rev),icon:"₹",color:COLORS[1]},
+  {title:"ARPU",value:money(avg),icon:"◉",color:COLORS[0]},
+  {title:"Postpaid Revenue",value:money(postRev),icon:"▣",color:COLORS[2]},
+  {title:"Postpaid Share",value:pct(rev?postRev/rev*100:0),icon:"%",color:COLORS[3]},
+  {title:"Total Data Usage",value:fmt(dataGB/1024,1)+" TB",icon:"⇅",color:COLORS[0]},
+  {title:"Avg Data / Customer",value:active?fmt(dataGB/active,1)+" GB":"0",icon:"◌",color:COLORS[4]}
+ ]);
+ let a=group(cm,r=>String(r.MonthStart).slice(0,7),revenue).sort((x,y)=>x[0].localeCompare(y[0]));line("revTrend",a.map(x=>x[0]),[{label:"Revenue",data:a.map(x=>x[1]/1e6),color:COLORS[0],fill:true}]);
+ a=group(cm,r=>(planMap.get(r.PlanID)||{}).PlanName||r.PlanID,revenue).sort((x,y)=>y[1]-x[1]);bar("revPlan",a.map(x=>x[0]),a.map(x=>x[1]/1e6),{color:COLORS[2]});
+ a=group(cm,"CustomerSegment",arpu).sort((x,y)=>y[1]-x[1]);bar("revArpu",a.map(x=>x[0]),a.map(x=>x[1]),{horizontal:true,color:COLORS[1]});
+ const plans=[...new Set(cm.map(r=>r.PlanID))].map(pid=>{const rows=cm.filter(r=>r.PlanID===pid);return {pid,name:(planMap.get(pid)||{}).PlanName||pid,usage:rows.reduce((s,r)=>s+num(r.DataUsageGB),0)/Math.max(1,uniqueCustomers(rows)),rev:revenue(rows)/1e6}});
+ scatter("revScatter",plans.map(p=>({x:p.usage,y:p.rev,label:p.name})),{xTitle:"Avg Data Usage (GB)",yTitle:"Revenue (₹M)"});
+ const rows=plans.map(p=>{const rr=cm.filter(r=>r.PlanID===p.pid);return [p.name,fmt(uniqueCustomers(rr)),money(revenue(rr)),money(arpu(rr)),pct(churnRate(rr)),fmt(rr.reduce((s,r)=>s+num(r.DataUsageGB),0)/Math.max(1,uniqueCustomers(rr)),1)+" GB"]});
+ table("planTable",["Plan","Customers","Revenue","ARPU","Churn","Avg Data"],rows);
+}
+function networkPage(){
+ const {nt}=filtered();
+ const speed=nt.length?nt.reduce((s,r)=>s+num(r.AvgDownloadMbps),0)/nt.length:0;
+ const lat=nt.length?nt.reduce((s,r)=>s+num(r.AvgLatencyMs),0)/nt.length:0;
+ const avail=nt.length?nt.reduce((s,r)=>s+num(r.AvailabilityPct),0)/nt.length:0;
+ const attempts=nt.reduce((s,r)=>s+num(r.CallAttempts),0),drops=nt.reduce((s,r)=>s+num(r.DroppedCalls),0);
+ const outage=nt.reduce((s,r)=>s+num(r.OutageMinutes),0)/60,traffic=nt.reduce((s,r)=>s+num(r.TotalDataTrafficTB),0),g5=nt.reduce((s,r)=>s+num(r.Traffic5GTB),0);
+ cards("networkKpis",[
+  {title:"Avg Download Speed",value:fmt(speed,1)+" Mbps",icon:"⚡",color:COLORS[0]},
+  {title:"Avg Latency",value:fmt(lat,1)+" ms",icon:"◷",color:COLORS[1]},
+  {title:"Network Availability",value:pct(avail),icon:"⬆",color:COLORS[3]},
+  {title:"Dropped Call Rate",value:pct(attempts?drops/attempts*100:0),icon:"☎",color:COLORS[2]},
+  {title:"Outage Hours",value:fmt(outage,1),icon:"!",color:COLORS[4]},
+  {title:"5G Traffic Share",value:pct(traffic?g5/traffic*100:0),icon:"5G",color:COLORS[1]}
+ ]);
+ let a=group(nt,"City",x=>x.reduce((s,r)=>s+num(r.AvgDownloadMbps),0)/x.length).sort((x,y)=>y[1]-x[1]);bar("netSpeed",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[0]});
+ a=group(nt,"Region",x=>x.reduce((s,r)=>s+num(r.DroppedCalls),0)/Math.max(1,x.reduce((s,r)=>s+num(r.CallAttempts),0))*100).sort((x,y)=>y[1]-x[1]);bar("netDcr",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[4],percent:true});
+ a=group(nt,r=>String(r.MonthStart).slice(0,7),x=>x.reduce((s,r)=>s+num(r.AvailabilityPct),0)/x.length).sort((x,y)=>x[0].localeCompare(y[0]));line("netAvail",a.map(x=>x[0]),[{label:"Availability",data:a.map(x=>x[1]),color:COLORS[3]}],{percent:true});
+ const months=[...new Set(nt.map(r=>String(r.MonthStart).slice(0,7)))].sort(),techs=["4G","5G"];
+ const sets=techs.map((t,i)=>({label:t,color:COLORS[i+1],data:months.map(m=>nt.filter(r=>String(r.MonthStart).startsWith(m)&&r.NetworkTech===t).reduce((s,r)=>s+num(r.TotalDataTrafficTB),0)),fill:true}));
+ line("netTraffic",months,sets);
+ const towers=[...new Set(nt.map(r=>r.TowerID))].map(tid=>{const r=nt.filter(x=>x.TowerID===tid);return {x:r.reduce((s,x)=>s+num(x.AvgDownloadMbps),0)/r.length,y:r.reduce((s,x)=>s+num(x.AvgLatencyMs),0)/r.length,label:tid}});scatter("netScatter",towers,{xTitle:"Download Speed (Mbps)",yTitle:"Latency (ms)"});
+ const tg=group(nt,"TowerID",x=>({city:x[0].City,tech:x[0].NetworkTech,cong:x.reduce((s,r)=>s+num(r.CongestionHours),0),avail:x.reduce((s,r)=>s+num(r.AvailabilityPct),0)/x.length,speed:x.reduce((s,r)=>s+num(r.AvgDownloadMbps),0)/x.length})).sort((x,y)=>y[1].cong-x[1].cong).slice(0,12);
+ table("towerTable",["Tower","City","Tech","Congestion Hrs","Availability","Speed"],tg.map(x=>[x[0],x[1].city,x[1].tech,fmt(x[1].cong,1),pct(x[1].avail),fmt(x[1].speed,1)+" Mbps"]));
+}
+function servicePage(){
+ const {tk}=filtered();const total=tk.length,open=tk.filter(r=>r.Status==="Open").length;
+ const sla=total?tk.filter(r=>num(r.ResolvedWithinSLA)===1).length/total*100:0;
+ const res=total?tk.reduce((s,r)=>s+num(r.ResolutionHours),0)/total:0,csat=total?tk.reduce((s,r)=>s+num(r.CSAT),0)/total:0;
+ const netIssues=tk.filter(r=>["Network Coverage","Slow Data","Call Drops"].includes(r.IssueType)).length;
+ cards("serviceKpis",[
+  {title:"Total Tickets",value:fmt(total),icon:"☑",color:COLORS[0]},
+  {title:"Open Tickets",value:fmt(open),icon:"◌",color:COLORS[2]},
+  {title:"SLA Met",value:pct(sla),icon:"✓",color:COLORS[3]},
+  {title:"Avg Resolution",value:fmt(res,1)+" h",icon:"◷",color:COLORS[1]},
+  {title:"Average CSAT",value:fmt(csat,2)+"/5",icon:"★",color:COLORS[4]},
+  {title:"Network Complaint Share",value:pct(total?netIssues/total*100:0),icon:"📡",color:COLORS[2]}
+ ]);
+ let a=group(tk,r=>String(r.MonthStart).slice(0,7),x=>x.length).sort((x,y)=>x[0].localeCompare(y[0]));line("svcTrend",a.map(x=>x[0]),[{label:"Tickets",data:a.map(x=>x[1]),color:COLORS[0]}]);
+ a=group(tk,"IssueType",x=>x.length).sort((x,y)=>y[1]-x[1]);bar("svcIssue",a.map(x=>x[0]),a.map(x=>x[1]),{horizontal:true,color:COLORS[1]});
+ a=group(tk,"Channel",x=>x.length?x.filter(r=>num(r.ResolvedWithinSLA)===1).length/x.length*100:0);bar("svcSla",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[0],percent:true});
+ a=group(tk,"Priority",x=>x.reduce((s,r)=>s+num(r.ResolutionHours),0)/x.length);bar("svcPriority",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[4]});
+ a=group(tk,"IssueType",x=>x.reduce((s,r)=>s+num(r.CSAT),0)/x.length).sort((x,y)=>y[1]-x[1]);bar("svcCsat",a.map(x=>x[0]),a.map(x=>x[1]),{color:COLORS[2]});
+ const rows=tk.filter(r=>r.Status==="Open").slice(0,50).map(r=>[r.TicketID,r.IssueType,r.Priority,r.Channel,r.City,fmt(r.ResolutionHours,1)]);
+ table("ticketTable",["Ticket","Issue","Priority","Channel","City","Hours"],rows);
+}
+function render(){
+ if(activePage==="overview")overview();
+ if(activePage==="customer")customer();
+ if(activePage==="revenue")revenuePage();
+ if(activePage==="network")networkPage();
+ if(activePage==="service")servicePage();
+}
+const pageMeta={
+ overview:["Executive Overview","Customer, revenue, network and service performance in one management view."],
+ customer:["Customer & Churn","Understand retention risk, customer mix and service demand."],
+ revenue:["Revenue & Plans","Track revenue quality, ARPU, plan performance and usage."],
+ network:["Network Performance","Monitor quality, availability, traffic, congestion and reliability."],
+ service:["Service & Complaints","Measure ticket demand, SLA delivery, resolution and CSAT."]
+};
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>{
+ activePage=b.dataset.page;document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x===b));
+ document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+activePage));
+ $("pageTitle").textContent=pageMeta[activePage][0];$("pageSub").textContent=pageMeta[activePage][1];setTimeout(render,20)
+}));
+["fromMonth","toMonth","region","city","plan","segment","planType"].forEach(id=>$(id).addEventListener("change",render));
+$("reset").addEventListener("click",()=>{
+ const ms=[...new Set(data.custMonthly.map(r=>String(r.MonthStart).slice(0,7)))].sort();
+ $("fromMonth").value=ms[0];$("toMonth").value=ms[ms.length-1];
+ ["region","city","plan","segment","planType"].forEach(id=>$(id).value="");render();
+});
+loadAll().catch(e=>{$("loading").innerHTML=`<div><h3>Could not load the dashboard data</h3><p>${e.message}</p><p>For local testing, run a local web server or deploy the folder to GitHub Pages.</p></div>`;console.error(e)});
+</script>
+</body>
+</html>
