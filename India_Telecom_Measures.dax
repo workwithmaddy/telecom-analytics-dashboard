@@ -1,0 +1,124 @@
+-- INDIA TELECOM PORTFOLIO MEASURES
+-- Synthetic portfolio data. Generic plan categories; no operator-specific plans.
+
+Total Customers =
+DISTINCTCOUNT ( DimCustomer[CustomerID] )
+
+Active Customers =
+CALCULATE (
+    DISTINCTCOUNT ( FactCustomerMonthly[CustomerID] ),
+    FactCustomerMonthly[ActiveFlag] = 1
+)
+
+Churned Customers =
+CALCULATE (
+    DISTINCTCOUNT ( FactCustomerMonthly[CustomerID] ),
+    FactCustomerMonthly[ChurnedThisMonth] = 1
+)
+
+Churn Rate % =
+DIVIDE ( [Churned Customers], [Active Customers] + [Churned Customers], 0 )
+
+Total Revenue =
+SUM ( FactCustomerMonthly[BilledRevenueINR] )
+
+Add-On Revenue =
+SUM ( FactCustomerMonthly[AddOnRevenueINR] )
+
+ARPU =
+DIVIDE ( [Total Revenue], [Active Customers], 0 )
+
+Total Data Usage GB =
+SUM ( FactCustomerMonthly[DataUsageGB] )
+
+Total Data Usage TB =
+DIVIDE ( [Total Data Usage GB], 1024, 0 )
+
+Avg Data Usage per Customer GB =
+DIVIDE ( [Total Data Usage GB], [Active Customers], 0 )
+
+Total Voice Minutes =
+SUM ( FactCustomerMonthly[VoiceMinutes] )
+
+Prepaid Revenue =
+CALCULATE ( [Total Revenue], DimPlan[PlanType] = "Prepaid" )
+
+Postpaid Revenue =
+CALCULATE ( [Total Revenue], DimPlan[PlanType] = "Postpaid" )
+
+Business Revenue =
+CALCULATE ( [Total Revenue], DimPlan[PlanType] = "Business" )
+
+Enterprise Revenue =
+CALCULATE ( [Total Revenue], DimPlan[PlanType] = "Enterprise" )
+
+Postpaid Revenue Share % =
+DIVIDE ( [Postpaid Revenue], [Total Revenue], 0 )
+
+Network Data Traffic TB =
+SUM ( FactNetworkMonthly[TotalDataTrafficTB] )
+
+5G Traffic TB =
+SUM ( FactNetworkMonthly[Traffic5GTB] )
+
+5G Traffic Share % =
+DIVIDE ( [5G Traffic TB], [Network Data Traffic TB], 0 )
+
+Avg Download Speed Mbps =
+AVERAGE ( FactNetworkMonthly[AvgDownloadMbps] )
+
+Avg Upload Speed Mbps =
+AVERAGE ( FactNetworkMonthly[AvgUploadMbps] )
+
+Avg Latency ms =
+AVERAGE ( FactNetworkMonthly[AvgLatencyMs] )
+
+Call Attempts =
+SUM ( FactNetworkMonthly[CallAttempts] )
+
+Dropped Calls =
+SUM ( FactNetworkMonthly[DroppedCalls] )
+
+Dropped Call Rate % =
+DIVIDE ( [Dropped Calls], [Call Attempts], 0 )
+
+Network Availability % =
+DIVIDE ( AVERAGE ( FactNetworkMonthly[AvailabilityPct] ), 100, 0 )
+
+Outage Hours =
+DIVIDE ( SUM ( FactNetworkMonthly[OutageMinutes] ), 60, 0 )
+
+Congestion Hours =
+SUM ( FactNetworkMonthly[CongestionHours] )
+
+Total Tickets =
+DISTINCTCOUNT ( FactServiceTickets[TicketID] )
+
+Open Tickets =
+CALCULATE ( [Total Tickets], FactServiceTickets[Status] = "Open" )
+
+SLA Met Tickets =
+CALCULATE ( [Total Tickets], FactServiceTickets[ResolvedWithinSLA] = 1 )
+
+SLA Met % =
+DIVIDE ( [SLA Met Tickets], [Total Tickets], 0 )
+
+Avg Resolution Hours =
+AVERAGE ( FactServiceTickets[ResolutionHours] )
+
+Average CSAT =
+AVERAGE ( FactServiceTickets[CSAT] )
+
+Tickets per 1K Customers =
+DIVIDE ( [Total Tickets] * 1000, [Active Customers], 0 )
+
+Network Complaint Tickets =
+CALCULATE (
+    [Total Tickets],
+    FactServiceTickets[IssueType] IN {
+        "Network Coverage", "Slow Internet", "Call Drops"
+    }
+)
+
+Network Complaint Share % =
+DIVIDE ( [Network Complaint Tickets], [Total Tickets], 0 )
